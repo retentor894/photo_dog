@@ -35,6 +35,102 @@ python photo_dog.py --start 100 --end 120
 
 Por defecto descarga a `downloads_myphotos/`. Puedes cambiarlo con `--out`.
 
+### Filtros por palabras clave (flexibles)
+
+Puedes filtrar imágenes por términos presentes en la URL o en el nombre del archivo. La coincidencia es flexible: sin mayúsculas ni acentos, separando guiones, subrayados y símbolos.
+
+- `--include`: palabras clave a requerir (se puede repetir o pasar separadas por comas).
+- `--exclude`: palabras clave a excluir.
+- `--include-any`: si se usa, basta con que coincida cualquiera de `--include` (por defecto, deben coincidir todas).
+- `--filter-on`: `url` (ruta completa), `filename` (solo nombre de archivo) o `auto` (por defecto, ruta completa).
+
+Ejemplos basados en URLs tipo wallpaper:
+
+```bash
+# Coincidir "John Smith"
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith"
+
+# Coincidir "The Tour" y tamaño "4k" (ambos deben aparecer)
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "The Tour" --include 4k
+
+# Coincidir cualquiera de los términos
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith,The Tour,4k" --include-any
+
+# Filtrar solo por nombre de archivo
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "john smith" --filter-on filename
+
+# Excluir "uhdpaper" pero incluir "4k"
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include 4k --exclude uhdpaper
+```
+
+### Dry-run (listar sin descargar)
+
+Si quieres ver qué coincidiría con tus filtros sin descargar nada, usa `--dry-run`.
+
+```bash
+# Lista coincidencias (muestra [MATCH] y no descarga)
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith,The Tour,4k" --include-any --dry-run
+```
+
+Activa `--verbose` para ver trazas de extracción y filtros (útil para depurar).
+
+#### Caso práctico: URL de wallpaper con strings
+
+Si la imagen final tiene un nombre descriptivo, por ejemplo:
+
+```
+https://myphotos.net/wallpaper/john-smith-the-tour-4k-wallpaper-uhdpaper.com-21@3@a.jpg
+```
+
+puedes localizarla por sus componentes de texto con filtros sobre el nombre de archivo:
+
+```bash
+# Buscar por artista (normaliza guiones/acentos y mayúsculas)
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith" --filter-on filename
+
+# Buscar por título y tamaño (ambos deben aparecer)
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "The Tour" --include 4k --filter-on filename
+
+# Cualquiera de los términos (artista, título o 4k)
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith,The Tour,4k" --include-any --filter-on filename
+
+# Incluir 4k y excluir "uhdpaper"
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include 4k --exclude uhdpaper --filter-on filename
+
+# Previsualizar sin descargar
+python photo_dog.py --base https://myphotos.net/picture.php --start 1 --end 500 \
+  --include "John Smith,The Tour,4k" --include-any --filter-on filename --dry-run
+```
+
+Consejos:
+- `--filter-on filename` centra la búsqueda en `.../john-smith-the-tour-4k-...jpg`.
+- La normalización elimina acentos, convierte a minúsculas y trata `-`, `_`, `@` y otros como separadores.
+
+### Modo listado (páginas sin pid)
+
+Para páginas que no usan `displayimage.php`/`picture.php` ni `pid`, como `https://myphotos.net/wallpaper/`, usa el modo `list`.
+Este modo abre una única página de listado, extrae enlaces a imágenes (`<img src>` y `<a href>` que terminen en `.jpg|png|...`), aplica filtros y descarga.
+
+```bash
+# Buscar imágenes en una página de listado, filtrando por nombre de archivo, con trazas
+python photo_dog.py --mode list --base https://myphotos.net/wallpaper/ --verbose \
+  --include "john smith" --include 4k --filter-on filename --dry-run
+
+# Descargar las coincidencias (quitando --dry-run)
+python photo_dog.py --mode list --base https://myphotos.net/wallpaper/ \
+  --include "john smith,the tour,4k" --include-any --filter-on filename
+```
+
 ### Rutas soportadas
 
 - Coppermine (por defecto):
@@ -156,4 +252,3 @@ Enfoque recomendado de pruebas (cuando se añadan):
 ## Aviso
 
 Este proyecto es para fines educativos. Asegúrate de tener permiso para descargar contenido. Respeta las leyes de copyright y las normas del sitio.
-
